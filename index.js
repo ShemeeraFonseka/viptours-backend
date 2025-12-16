@@ -14,8 +14,8 @@ try {
   __dirname = process.cwd();
 }
 
-// Import MongoDB connection (db.js)
-import './db.js';
+// Import MongoDB connection function
+import connectDB from './db.js';
 
 // Import routes
 import packagesRoutes from './routes/packages.js';
@@ -26,7 +26,7 @@ import guidesRoutes from './routes/guides.js';
 import aboutRoutes from './routes/about.js';
 import contactInfoRoutes from './routes/contactInfo.js';
 import usersRoutes from './routes/users.js';
-import authRoutes, { authenticateToken } from './routes/auth.js';
+import authRoutes from './routes/auth.js';
 import dashboardRoutes from './routes/dashboard.js';
 
 import travelaAboutRoutes from './travelaroutes/travelaAbout.js';
@@ -47,17 +47,23 @@ import vipTestimonialRoutes from './viproutes/vipTestimonial.js';
 import vipPackageRoutes from './viproutes/vipPackage.js';
 import vipbookingsRoutes from './viproutes/vipBooking.js';
 
-
-
-
-
-
 const app = express();
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
+// Database connection middleware - connect before handling requests
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (error) {
+    console.error('Database connection failed:', error);
+    res.status(500).json({ error: 'Database connection failed' });
+  }
+});
 
 // Root route
 app.get('/', (req, res) => {
@@ -94,17 +100,17 @@ app.use('/vipapi/testimonials', vipTestimonialRoutes);
 app.use('/vipapi/packages', vipPackageRoutes);
 app.use('/vipapi/bookings', vipbookingsRoutes);
 
-
 // Error handler
 app.use((err, req, res, next) => {
   console.error('Unhandled error:', err);
-  res.status(500).json({ error: 'Internal server error' });
+  res.status(500).json({ error: 'Internal server error', details: err.message });
 });
 
 // Start server (only in development)
 if (process.env.NODE_ENV !== 'production') {
   const PORT = process.env.PORT || 5000;
-  app.listen(PORT, () => {
+  app.listen(PORT, async () => {
+    await connectDB();
     console.log(`🚀 Server running on port ${PORT}`);
   });
 }
