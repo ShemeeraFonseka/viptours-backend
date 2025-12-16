@@ -1,56 +1,68 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import path from 'path';
+dotenv.config();  
+import path from "path";
 import { fileURLToPath } from 'url';
 
-dotenv.config();
+// Use a try-catch to handle both ESM and CommonJS environments
+let __dirname;
+try {
+  const __filename = fileURLToPath(import.meta.url);
+  __dirname = path.dirname(__filename);
+} catch {
+  __dirname = process.cwd();
+}
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Import MongoDB connection (db.js)
+import './db.js';
 
-// DB connection
-import '../db.js';
+// Import routes
+import packagesRoutes from './routes/packages.js';
+import bookingStepsRoutes from './routes/bookingSteps.js';
+import bookingsRoutes from './routes/bookings.js';
+import servicesRoutes from './routes/services.js';
+import guidesRoutes from './routes/guides.js';
+import aboutRoutes from './routes/about.js';
+import contactInfoRoutes from './routes/contactInfo.js';
+import usersRoutes from './routes/users.js';
+import authRoutes, { authenticateToken } from './routes/auth.js';
+import dashboardRoutes from './routes/dashboard.js';
 
-// Routes
-import packagesRoutes from '../routes/packages.js';
-import bookingStepsRoutes from '../routes/bookingSteps.js';
-import bookingsRoutes from '../routes/bookings.js';
-import servicesRoutes from '../routes/services.js';
-import guidesRoutes from '../routes/guides.js';
-import aboutRoutes from '../routes/about.js';
-import contactInfoRoutes from '../routes/contactInfo.js';
-import usersRoutes from '../routes/users.js';
-import authRoutes from '../routes/auth.js';
-import dashboardRoutes from '../routes/dashboard.js';
+import travelaAboutRoutes from './travelaroutes/travelaAbout.js';
+import travelaServiceRoutes from './travelaroutes/travelaService.js';
+import travelaPackageRoutes from './travelaroutes/travelaPackage.js';
+import travelaGuideRoutes from './travelaroutes/travelaGuide.js';
+import travelabookingsRoutes from './travelaroutes/travelaBooking.js';
+import travelausersRoutes from './travelaroutes/travelaUser.js';
+import travelacontactInfoRoutes from './travelaroutes/travelaContactInfo.js';
+import traveladashboardRoutes from './travelaroutes/travelaDashboard.js';
+import travelaauthRoutes from './travelaroutes/travelaAuth.js';
 
-import travelaAboutRoutes from '../travelaroutes/travelaAbout.js';
-import travelaServiceRoutes from '../travelaroutes/travelaService.js';
-import travelaPackageRoutes from '../travelaroutes/travelaPackage.js';
-import travelaGuideRoutes from '../travelaroutes/travelaGuide.js';
-import travelabookingsRoutes from '../travelaroutes/travelaBooking.js';
-import travelausersRoutes from '../travelaroutes/travelaUser.js';
-import travelacontactInfoRoutes from '../travelaroutes/travelaContactInfo.js';
-import traveladashboardRoutes from '../travelaroutes/travelaDashboard.js';
-import travelaauthRoutes from '../travelaroutes/travelaAuth.js';
+import vipAboutRoutes from './viproutes/vipAbout.js';
+import vipcontactInfoRoutes from './viproutes/vipContactInfo.js';
+import viphomeRoutes from './viproutes/vipHome.js';
+import vipGalleryRoutes from './viproutes/vipGallery.js';
+import vipTestimonialRoutes from './viproutes/vipTestimonial.js';
+import vipPackageRoutes from './viproutes/vipPackage.js';
+import vipbookingsRoutes from './viproutes/vipBooking.js';
 
-import vipAboutRoutes from '../viproutes/vipAbout.js';
-import vipcontactInfoRoutes from '../viproutes/vipContactInfo.js';
-import viphomeRoutes from '../viproutes/vipHome.js';
-import vipGalleryRoutes from '../viproutes/vipGallery.js';
-import vipTestimonialRoutes from '../viproutes/vipTestimonial.js';
-import vipPackageRoutes from '../viproutes/vipPackage.js';
-import vipbookingsRoutes from '../viproutes/vipBooking.js';
+
+
+
+
 
 const app = express();
 
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-// Static uploads (⚠️ ephemeral on Vercel)
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+// Root route
+app.get('/', (req, res) => {
+  res.json({ message: 'Server is running' });
+});
 
 // Routes
 app.use('/api/packages', packagesRoutes);
@@ -82,25 +94,20 @@ app.use('/vipapi/testimonials', vipTestimonialRoutes);
 app.use('/vipapi/packages', vipPackageRoutes);
 app.use('/vipapi/bookings', vipbookingsRoutes);
 
-// Root
-app.get('/', (req, res) => {
-  res.json({
-    message: 'Serverless API is running',
-    endpoints: {
-      api: '/api/*',
-      travelaapi: '/travelaapi/*',
-      vipapi: '/vipapi/*'
-    }
-  });
-});
 
 // Error handler
 app.use((err, req, res, next) => {
-  console.error(err);
-  res.status(500).json({
-    error: 'Internal Server Error',
-    message: err.message
-  });
+  console.error('Unhandled error:', err);
+  res.status(500).json({ error: 'Internal server error' });
 });
 
+// Start server (only in development)
+if (process.env.NODE_ENV !== 'production') {
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+  });
+}
+
+// Export for Vercel
 export default app;
