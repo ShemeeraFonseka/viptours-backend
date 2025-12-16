@@ -2,7 +2,7 @@ import express from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
-import Vipvippackage from '../vipmodels/Vippackage.js';
+import Vipvippackage from '../vipmodels/VipPackage.js';
 
 const router = express.Router();
 
