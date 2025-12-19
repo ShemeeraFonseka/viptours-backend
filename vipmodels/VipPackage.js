@@ -7,6 +7,7 @@ const VipPackageSchema = new mongoose.Schema({
   price: { type: String, required: true },
   image: { type: String, required: true },
   
+  
   // Detailed content fields
   detailedTitle: { type: String },
   detailedIntro: { type: String },
