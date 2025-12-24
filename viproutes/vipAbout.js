@@ -1,42 +1,9 @@
 // routes/about.js
 import express from 'express';
-import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
 import About from '../vipmodels/VipAbout.js';
+import { upload, uploadToGridFS, deleteFromGridFS } from '../config/gridfsConfig.js';
 
 const router = express.Router();
-
-// ================== MULTER CONFIGURATION ==================
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadDir = 'uploads/about';
-    // Create directory if it doesn't exist
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, 'about-' + uniqueSuffix + path.extname(file.originalname));
-  }
-});
-
-const upload = multer({
-  storage: storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
-  fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|gif|webp/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedTypes.test(file.mimetype);
-    
-    if (mimetype && extname) {
-      return cb(null, true);
-    }
-    cb(new Error('Only image files are allowed!'));
-  }
-});
 
 // ================== ROUTES ==================
 
@@ -82,25 +49,34 @@ router.post('/', upload.fields([
       });
     }
 
-    const section1Image = req.files?.section1Image?.[0]?.path || '/images/about.jpg';
-    const section2Image = req.files?.section2Image?.[0]?.path || '/images/ab2.jpg';
-
-    const newAbout = new About({
+    const aboutData = {
       section1: {
         heading: section1Heading || 'About VIP Tours',
         paragraph1: section1Para1,
-        paragraph2: section1Para2,
-        image: section1Image
+        paragraph2: section1Para2
       },
       section2: {
         paragraph1: section2Para1,
         paragraph2: section2Para2,
-        paragraph3: section2Para3,
-        image: section2Image
+        paragraph3: section2Para3
       }
-    });
+    };
 
+    // Handle section1 image upload to GridFS
+    if (req.files?.section1Image) {
+      const section1ImageResult = await uploadToGridFS(req.files.section1Image[0]);
+      aboutData.section1.image = section1ImageResult.filename;
+    }
+
+    // Handle section2 image upload to GridFS
+    if (req.files?.section2Image) {
+      const section2ImageResult = await uploadToGridFS(req.files.section2Image[0]);
+      aboutData.section2.image = section2ImageResult.filename;
+    }
+
+    const newAbout = new About(aboutData);
     const savedAbout = await newAbout.save();
+
     res.status(201).json({ 
       message: '✅ Content created successfully', 
       data: savedAbout 
@@ -148,30 +124,38 @@ router.put('/:id', upload.fields([
       }
     };
 
-    // Handle new images
+    // Handle section1 image update
     if (req.files?.section1Image) {
-      // Delete old image if it's not a default one
-      if (existingAbout.section1.image && 
-          existingAbout.section1.image.startsWith('uploads/')) {
+      // Delete old image from GridFS if it exists
+      if (existingAbout.section1.image) {
         try {
-          fs.unlinkSync(existingAbout.section1.image);
+          await deleteFromGridFS(existingAbout.section1.image);
+          console.log('✅ Deleted old section1 image from GridFS');
         } catch (err) {
-          console.log('Could not delete old image:', err);
+          console.log('⚠️ Could not delete old section1 image:', err.message);
         }
       }
-      updateData.section1.image = req.files.section1Image[0].path;
+      
+      // Upload new image to GridFS
+      const section1ImageResult = await uploadToGridFS(req.files.section1Image[0]);
+      updateData.section1.image = section1ImageResult.filename;
     }
 
+    // Handle section2 image update
     if (req.files?.section2Image) {
-      if (existingAbout.section2.image && 
-          existingAbout.section2.image.startsWith('uploads/')) {
+      // Delete old image from GridFS if it exists
+      if (existingAbout.section2.image) {
         try {
-          fs.unlinkSync(existingAbout.section2.image);
+          await deleteFromGridFS(existingAbout.section2.image);
+          console.log('✅ Deleted old section2 image from GridFS');
         } catch (err) {
-          console.log('Could not delete old image:', err);
+          console.log('⚠️ Could not delete old section2 image:', err.message);
         }
       }
-      updateData.section2.image = req.files.section2Image[0].path;
+      
+      // Upload new image to GridFS
+      const section2ImageResult = await uploadToGridFS(req.files.section2Image[0]);
+      updateData.section2.image = section2ImageResult.filename;
     }
 
     const updated = await About.findByIdAndUpdate(
@@ -190,7 +174,7 @@ router.put('/:id', upload.fields([
   }
 });
 
-// DELETE - Delete about content (optional)
+// DELETE - Delete about content
 router.delete('/:id', async (req, res) => {
   try {
     const aboutData = await About.findById(req.params.id);
@@ -198,16 +182,24 @@ router.delete('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Content not found' });
     }
 
-    // Delete associated images
-    [aboutData.section1.image, aboutData.section2.image].forEach(imagePath => {
-      if (imagePath && imagePath.startsWith('uploads/')) {
-        try {
-          fs.unlinkSync(imagePath);
-        } catch (err) {
-          console.log('Could not delete image:', err);
-        }
+    // Delete images from GridFS
+    if (aboutData.section1.image) {
+      try {
+        await deleteFromGridFS(aboutData.section1.image);
+        console.log('✅ Deleted section1 image from GridFS');
+      } catch (err) {
+        console.log('⚠️ Could not delete section1 image:', err.message);
       }
-    });
+    }
+
+    if (aboutData.section2.image) {
+      try {
+        await deleteFromGridFS(aboutData.section2.image);
+        console.log('✅ Deleted section2 image from GridFS');
+      } catch (err) {
+        console.log('⚠️ Could not delete section2 image:', err.message);
+      }
+    }
 
     await About.findByIdAndDelete(req.params.id);
     res.json({ message: '✅ Content deleted successfully' });
