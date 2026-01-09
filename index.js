@@ -45,10 +45,13 @@ import vipAboutRoutes from './viproutes/vipAbout.js';
 import vipcontactInfoRoutes from './viproutes/vipContactInfo.js';
 import viphomeRoutes from './viproutes/vipHome.js';
 import vipGalleryRoutes from './viproutes/vipGallery.js';
+import vipDestinationRoutes from './viproutes/vipDestination.js';
 import vipTestimonialRoutes from './viproutes/vipTestimonial.js';
 import vipPackageRoutes from './viproutes/vipPackage.js';
 import vipbookingsRoutes from './viproutes/vipBooking.js';
 import imageRoutes from './viproutes/imageRoutes.js';
+
+
 
 const app = express();
 
@@ -116,10 +119,13 @@ app.use('/vipapi/about', vipAboutRoutes);
 app.use('/vipapi/contact-info', vipcontactInfoRoutes);
 app.use('/vipapi/home', viphomeRoutes);
 app.use('/vipapi/gallery', vipGalleryRoutes);
+app.use('/vipapi/destination', vipDestinationRoutes);
 app.use('/vipapi/testimonials', vipTestimonialRoutes);
 app.use('/vipapi/packages', vipPackageRoutes);
 app.use('/vipapi/bookings', vipbookingsRoutes);
 app.use('/vipapi/images', imageRoutes);
+
+app.use('/vipapi/carousel', express.static(path.join(process.cwd(), 'uploads/carousel')));
 
 // Error handler
 app.use((err, req, res, next) => {

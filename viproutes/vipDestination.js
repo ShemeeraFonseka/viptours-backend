@@ -1,5 +1,5 @@
 import express from 'express';
-import VipGallery from '../vipmodels/VipGallery.js';
+import VipGallery from '../vipmodels/VipDestination.js';
 import { upload, uploadToGridFS, deleteFromGridFS } from '../config/gridfsConfig.js';
 
 const router = express.Router();
